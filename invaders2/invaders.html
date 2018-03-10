@@ -26,6 +26,8 @@ function preload() {
     game.load.spritesheet('kaboom', 'assets/games/invaders/explode.png', 128, 128);
     game.load.image('starfield', 'assets/games/invaders/starfield.png');
     game.load.spritesheet('sprite', 'assets/games/invaders/Sprite-Bottle-50x50.png', 50, 50);
+    game.load.image('lime', 'assets/games/invaders/lime32x32.png', 32, 32);
+    game.load.image('lemon', 'assets/games/invaders/lemon.png', 32, 32);
 }
 
 var player;
@@ -43,18 +45,22 @@ var lives;
 var livesText;
 var waveTimer = 0;
 var firingTimer = 0;
+var fruitTimer;
+var limeTIme
 var stateText;
 var livingEnemies = [];
 var enemies;
 var level = 0;
 var counter = 0;
 var minEnemyVelocity = 10;
-var maxEnemyVelocity = 60;
+var maxEnemyVelocity = 40;
 var playerSpeed = 200;
 var numberOfLives = 3;
 function create() {
 
-
+    fruitTimer = game.time.now + 10000; // Don't make fruit until 10 seconds have passed
+    limeTime = game.time.now + 15000;
+	
     game.physics.startSystem(Phaser.Physics.ARCADE);
 
     //  The scrolling starfield background
@@ -89,6 +95,15 @@ function create() {
     game.physics.enable(player, Phaser.Physics.ARCADE);
     player.body.collideWorldBounds = true;
     
+
+    lemons = game.add.group();
+    lemons.enableBody = true;
+    lemons.physicsBodyType = Phaser.Physics.ARCADE;
+
+    limes = game.add.group();
+    limes.enableBody = true;
+    limes.physicsBodyType = Phaser.Physics.ARCADE;
+
   	// create an enemies group
   	// make sure the enemies can move around too
   	aliens = game.add.group();
@@ -157,7 +172,7 @@ function createEnemies()
 
         // checks if the alien is out of bounds and acts as if it hits the player
         alien.checkWorldBounds = true;
-        alien.events.onOutOfBounds.add(enemyHitsPlayer, this);
+        alien.events.onOutOfBounds.add(enemyOutOfBounds, this);
 	}
 }
 
@@ -194,7 +209,13 @@ function update() {
         else if (cursors.right.isDown)
         {
             player.body.velocity.x = 200;
-        }
+        } else if(cursors.up.isDown) {
+
+	    player.body.velocity.y = -200 // Inverted b/c 0,0 is top left...
+
+	} else if(cursors.down.isDown) {
+	    player.body.velocity.y = 200
+	}
 
         //  Firing?
         if (fireButton.isDown)
@@ -213,19 +234,29 @@ function update() {
 			// create another way
             createNextWave();
 			// use your counter to determine if things should get faster`
-			counter++;
+	    counter++;
 			// you can use whatever number you want in here
-			if(counter % 5)
+	    if(counter % 5)
 			{
 				// increase the speed of the velocities and the player speed
-				aliens.forEachAlive(function(alien) {
+	    aliens.forEachAlive(function(alien) {
                     alien.body.velocity.y += 10;
                 });
 
-                player.body.velocity.x += 10;
-                player.body.velocity.y += 10;
-			}
+            player.body.velocity.x += 10;
+            player.body.velocity.y += 10;
+	    }
+        }   
+            
+        if (game.time.now > fruitTimer)
+        {
+           createLemons();   
         }
+
+	if(game.time.now > limeTime)
+	{
+	createLimes();
+	}
         
 	    //  Run collision	
 		 	// check collision for the bullets and enemies
@@ -233,9 +264,9 @@ function update() {
       // check collision for the enemies and the player
       game.physics.arcade.overlap(enemyBullets, player, enemyHitsPlayer, null, this);
       game.physics.arcade.overlap(aliens, player, enemyHitsPlayer, null, this);
-		
+      game.physics.arcade.overlap(lemons, player, collectionHandler, null, this);
+      game.physics.arcade.overlap(limes, player, limeHandler, null, this);	
     }
-
 }
 
 
@@ -266,14 +297,45 @@ function collisionHandler (bullet, bad) {
     
 }
 
+function limeHandler(player, lime){
+
+     numberOfLives += 1;
+     lime.kill();
+   
+     var ship = lives.create(game.world.width - 100 + (30 * numberOfLives + 1), 60, 'ship');
+     ship.anchor.setTo(0.5, 0.5);
+     ship.angle = 90;
+     ship.alpha = 0.4;
+   
+
+	// update the lives text
+    livesText.text = 'Lives: ' + numberOfLives;
+
+}
+
+function collectionHandler (player, lemon) {
+
+    //  When a bullet hits an alien we kill them both
+    lemon.kill();
+
+    //  Increase the score
+    score += 20;
+    scoreText.text = scoreString + score;
+}
+
 /*
 	If the enemy hits a player, kill them both
 */
-function enemyHitsPlayer (bad) {
+function enemyHitsPlayer (player, bad) {
  
 	// kill both the enemy and the player
     bad.kill();
     killPlayer();
+}
+
+function enemyOutOfBounds(bad) {
+	bad.kill();
+	killPlayer();
 }
 
 /*
@@ -327,6 +389,50 @@ function createNextWave () {
     
 }
 
+function createLemons()
+{
+
+	for(var i = 0; i < 5; i++)
+	{
+
+	x = game.rnd.integerInRange(10, game.world.width);
+        y = game.rnd.integerInRange(0, game.world.height);
+
+	while(x == player.body.x) {
+             x = game.rnd.integerInRange(10, game.world.width);
+	}
+	while(y == player.body.y) {
+	     y = game.rnd.integerInRange(0, game.world.height);
+	}
+		var lemon = lemons.create(x, y, 'lemon');
+                lemon.anchor.setTo(0.5, 0.5);
+	}
+
+	fruitTimer = game.time.now + 10000
+}
+
+
+function createLimes()
+{
+	for(var i = 0; i < 2; i++)
+	{
+	      x = game.rnd.integerInRange(10, game.world.width);
+              y = game.rnd.integerInRange(0, game.world.height);
+
+	     while(x == player.body.x) {
+	         x = game.rnd.integerInRange(10, game.world.width);
+	     }
+	     while(y == player.body.y) {
+	         y = game.rnd.integerInRange(0, game.world.height);
+	     }
+	
+		// create enemies randomly between 10 to the width of the screen
+		var lime = limes.create(x, y, 'lime');
+                lime.anchor.setTo(0.5, 0.5);
+	}
+        limeTime = game.time.now + 15000
+	
+}
 function enemyFires () {
 
     //  Grab the first bullet we can from the pool
@@ -375,7 +481,7 @@ function fireBullet () {
 			//  And fire the bullet... this all works
             bullet.reset(player.x + player.width/2, player.y + 8);
             bullet.body.velocity.y = -400;
-            bulletTime = game.time.now + 200;
+            bulletTime = game.time.now + 400;
         }
     }
 
@@ -394,6 +500,8 @@ function restart () {
 
 	// reset the number of lives
     numberOfLives = 3;
+score = 0;
+scoreText.text = 'Score: ' + score;
 	
 	// set the lives text so it reflects the original lives
 	livesText.text = 'Lives: ' + numberOfLives;
@@ -404,11 +512,15 @@ function restart () {
 	
 	
 	// reset the counter
-    counter = 0;
+        counter = 0;
+	fruitTime = game.time.now + 10000;
+	limeTime = game.time.now + 15000;
 	
 	// this all works below here....
     //resets the life count
     lives.callAll('revive');
+    lemons.removeAll();
+    limes.removeAll();
     //  And brings the aliens back from the dead :)
     aliens.removeAll();
     // create the enemies again

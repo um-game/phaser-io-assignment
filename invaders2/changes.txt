@@ -1,0 +1,9 @@
+Kyle Lucke
+Cameron Gomke
+Zack Falkner
+Adam Clemons
+
+Most of the feedback we recieved is that the game was too hard. 
+To alleviate this, we simply slowed the enemies down, made them fire a bit less and gave the player the ability to gain extra lives by collecting limes. Additionally, the player can also collect lemons for extra points.
+
+One thing to note is that I could not make the little ships properly display the correct number of lives, however, the actual number is correct as well as the logic.
